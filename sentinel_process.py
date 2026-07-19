@@ -1,5 +1,4 @@
 import json
-import datetime as dt
 import numpy as np
 import requests
 from PIL import Image
@@ -17,110 +16,161 @@ def load_config():
         return json.load(f)
 
 
+
 def build_evalscript():
 
     return """
 //VERSION=3
 
 function setup() {
+
   return {
-    input:[{
-        bands:["VV","dataMask"]
-    }],
+
+    input:[
+      {
+        bands:[
+          "VV",
+          "dataMask"
+        ]
+      }
+    ],
+
     output:{
-        bands:1,
-        sampleType:"UINT8"
+      bands:1,
+      sampleType:"UINT8"
     }
+
   }
+
 }
+
 
 
 function toDB(x){
-    return 10.0*Math.log(x)/Math.LN10;
+
+    return 10.0 * Math.log(x) / Math.LN10;
+
 }
+
 
 
 function evaluatePixel(s){
 
+
     if(s.dataMask==0)
+
         return [0];
+
 
     var db = toDB(s.VV);
 
-    var v = (db+25)/25;
 
-    v=Math.max(0,Math.min(1,v));
+    var v = (db + 25) / 25;
 
-    return [Math.round(v*255)];
+
+    v = Math.max(0, Math.min(1, v));
+
+
+    return [
+        Math.round(v * 255)
+    ];
+
 }
 """
+
 
 
 def download_preview(bbox, time_from, time_to):
 
     cfg = load_config()
 
+
     token = get_token()
 
+
     headers = {
+
         "Authorization": f"Bearer {token}",
+
         "Content-Type": "application/json"
+
     }
+
 
 
     body = {
 
-        "input": {
 
-            "bounds": {
+        "input":{
 
-                "bbox": bbox,
 
-                "properties": {
-                    "crs":"http://www.opengis.net/def/crs/EPSG/0/4326"
+            "bounds":{
+
+                "bbox":bbox,
+
+                "properties":{
+
+                    "crs":
+                    "http://www.opengis.net/def/crs/EPSG/0/4326"
+
                 }
 
             },
 
 
-            "data":[{
+            "data":[
 
-                "type":"sentinel-1-grd",
+                {
 
-                "dataFilter":{
+                    "type":"sentinel-1-grd",
 
-                    "timeRange":{
+                    "dataFilter":{
 
-                        "from":iso_z(time_from),
+                        "timeRange":{
 
-                        "to":iso_z(time_to)
+                            "from":iso_z(time_from),
 
-                    },
+                            "to":iso_z(time_to)
 
-                    "mosaickingOrder":"mostRecent"
+                        },
+
+                        "mosaickingOrder":"mostRecent"
+
+                    }
 
                 }
 
-            }]
+            ]
 
         },
 
 
         "output":{
 
-            "width":cfg.get("tile_width",1024),
 
-            "height":cfg.get("tile_height",1024),
+            # رفع الدقة لمنع خطأ Copernicus
+            # الحد الأعلى 1500 متر/بكسل
 
-            "responses":[{
+            "width":1500,
 
-                "identifier":"default",
+            "height":1500,
 
-                "format":{
-                    "type":"image/png"
+
+            "responses":[
+
+                {
+
+                    "identifier":"default",
+
+                    "format":{
+
+                        "type":"image/png"
+
+                    }
+
                 }
 
-            }]
+            ]
 
         },
 
@@ -130,17 +180,26 @@ def download_preview(bbox, time_from, time_to):
     }
 
 
+
     try:
 
+
         r = requests.post(
+
             PROCESS_API,
+
             headers=headers,
+
             json=body,
+
             timeout=180
+
         )
 
 
+
         if not r.ok:
+
 
             print("\n❌ Copernicus Process API Error")
 
@@ -153,8 +212,11 @@ def download_preview(bbox, time_from, time_to):
 
 
         img = Image.open(
+
             BytesIO(r.content)
+
         ).convert("L")
+
 
 
         return np.array(img)
@@ -163,7 +225,9 @@ def download_preview(bbox, time_from, time_to):
 
     except Exception as e:
 
-        print("\n❌ Preview download failed:")
+
+        print("\n❌ Image download failed")
+
         print(e)
 
         return None
