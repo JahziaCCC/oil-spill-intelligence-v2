@@ -1,59 +1,63 @@
+import json
+import datetime as dt
+
 from sentinel import get_latest_scene
 from sentinel_process import download_preview
 from oil_detector import detect_dark_spots, risk_score
 
-import datetime as dt
+
+def load_config():
+    with open("config.json", "r", encoding="utf-8") as f:
+        return json.load(f)
+
 
 print("==================================================")
 print("Oil Spill Intelligence V2")
 print("==================================================")
 
-# الخليج العربي
-bbox = [47.0, 23.0, 56.8, 30.8]
+cfg = load_config()
 
-scene = get_latest_scene(bbox)
+for area in cfg["areas"]:
 
-if scene is None:
-    print("No Sentinel-1 scene found.")
-    exit()
+    print(f"\n📍 المنطقة: {area['name_ar']}")
 
-print("Scene:")
-print(scene["id"])
+    scene = get_latest_scene(
+        area["bbox"],
+        cfg["lookback_hours"]
+    )
 
-scene_time = dt.datetime.fromisoformat(
-    scene["properties"]["datetime"].replace("Z", "+00:00")
-)
+    if scene is None:
+        print("No scene found.")
+        continue
 
-img = download_preview(
-    bbox,
-    scene_time - dt.timedelta(minutes=10),
-    scene_time + dt.timedelta(minutes=10),
-)
+    print("Scene:")
+    print(scene["id"])
 
-print("")
-print("Image downloaded successfully.")
-print("Image shape:", img.shape)
+    scene_time = dt.datetime.fromisoformat(
+        scene["properties"]["datetime"].replace("Z", "+00:00")
+    )
 
-# ====================================
-# تحليل الصورة
-# ====================================
+    img = download_preview(
+        area["bbox"],
+        scene_time - dt.timedelta(minutes=10),
+        scene_time + dt.timedelta(minutes=10)
+    )
 
-result = detect_dark_spots(img)
+    print("Image:", img.shape)
 
-print("")
-print("========== Analysis ==========")
+    result = detect_dark_spots(img)
 
-if result is None:
-
-    print("No dark spot detected")
-
-else:
+    if result is None:
+        print("No dark spot detected.")
+        continue
 
     score = risk_score(result["ratio"])
 
-    print(f"Dark Area : {result['area']:,} pixels")
+    print(f"Dark Area : {result['area']:,}")
     print(f"Dark Ratio: {result['ratio']:.4%}")
     print(f"Risk Score: {score}/100")
     print(f"Center    : {result['center']}")
 
-print("==============================")
+print("\n==================================================")
+print("Finished")
+print("==================================================")
