@@ -1,11 +1,27 @@
 {
-  "version": "2.0",
+    "lookback_hours": 72,
 
-  "weather": {
-    "enabled": true
-  },
+    "tile_width": 1024,
+    "tile_height": 1024,
 
-  "telegram": {
-    "enabled": false
-  }
+    "tiles_nx": 3,
+    "tiles_ny": 3,
+
+    "dark_db_threshold": -18,
+
+    "min_dark_ratio": 0.004,
+
+    "areas": [
+
+        {
+            "name_ar": "الخليج العربي",
+            "bbox": [47.0,23.0,56.8,30.8]
+        },
+
+        {
+            "name_ar": "البحر الأحمر",
+            "bbox": [32.0,12.0,44.5,30.5]
+        }
+
+    ]
 }
