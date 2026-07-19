@@ -1,47 +1,54 @@
 import numpy as np
+from scipy import ndimage
 
 
-def detect_dark_spots(img, threshold=35):
-    """
-    كشف البقع الداكنة في صورة SAR.
-    img : numpy array (Grayscale)
-    """
+def detect_dark_spots(img):
+
+    # عتبة تكيفية بدلاً من رقم ثابت
+    threshold = np.percentile(img, 8)
 
     mask = img < threshold
 
-    dark_pixels = int(mask.sum())
-    total_pixels = mask.size
+    # إزالة النقاط الصغيرة
+    mask = ndimage.binary_opening(mask, iterations=2)
 
-    ratio = dark_pixels / total_pixels
+    # دمج الأجزاء القريبة
+    mask = ndimage.binary_closing(mask, iterations=3)
 
-    return mask, ratio
+    labels, count = ndimage.label(mask)
 
-
-def centroid(mask):
-    """
-    حساب مركز البقعة الداكنة.
-    """
-
-    ys, xs = np.where(mask)
-
-    if len(xs) == 0:
+    if count == 0:
         return None
 
-    x = int(xs.mean())
-    y = int(ys.mean())
+    sizes = ndimage.sum(mask, labels, range(1, count + 1))
 
-    return x, y
+    largest = np.argmax(sizes) + 1
+
+    largest_mask = labels == largest
+
+    area = int(sizes[largest - 1])
+
+    ratio = area / mask.size
+
+    cy, cx = ndimage.center_of_mass(largest_mask)
+
+    return {
+        "mask": largest_mask,
+        "ratio": ratio,
+        "center": (int(cx), int(cy)),
+        "area": area,
+    }
 
 
 def risk_score(ratio):
 
-    if ratio > 0.06:
+    if ratio > 0.05:
         return 90
 
-    if ratio > 0.03:
+    if ratio > 0.02:
         return 70
 
-    if ratio > 0.015:
-        return 55
+    if ratio > 0.005:
+        return 50
 
     return 20
