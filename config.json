@@ -1,1 +1,11 @@
+{
+  "version": "2.0",
 
+  "weather": {
+    "enabled": true
+  },
+
+  "telegram": {
+    "enabled": false
+  }
+}
