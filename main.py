@@ -1,14 +1,18 @@
 from sentinel import get_latest_scene
 
-scene = get_latest_scene()
+print("==================================================")
+print("Latest Sentinel-1 Scene")
+print("==================================================")
 
-print("=" * 50)
+# الخليج العربي
+bbox = [47.0, 23.0, 56.8, 30.8]
+
+scene = get_latest_scene(bbox)
 
 if scene:
-    print("Latest Sentinel-1 Scene")
-    print(scene["scene"])
-    print(scene["time"])
+    print(scene["id"])
+    print(scene["properties"]["datetime"])
 else:
-    print("No Scene Found")
+    print("No scene found")
 
-print("=" * 50)
+print("==================================================")
