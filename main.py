@@ -27,7 +27,7 @@ for area in cfg["areas"]:
     )
 
     if scene is None:
-        print("No scene found.")
+        print("No Sentinel-1 scene found.")
         continue
 
     print("Scene:")
@@ -42,6 +42,11 @@ for area in cfg["areas"]:
         scene_time - dt.timedelta(minutes=10),
         scene_time + dt.timedelta(minutes=10)
     )
+
+    # إذا فشل تحميل الصورة لا توقف النظام
+    if img is None:
+        print("Image download failed.")
+        continue
 
     print("Image:", img.shape)
 
