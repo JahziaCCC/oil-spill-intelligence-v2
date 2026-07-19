@@ -1,5 +1,7 @@
 from sentinel import get_latest_scene
 from sentinel_process import download_preview
+from oil_detector import detect_dark_spots, centroid, risk_score
+
 import datetime as dt
 
 print("==================================================")
@@ -31,7 +33,25 @@ img = download_preview(
 print("")
 print("Image downloaded successfully.")
 print("Image shape:", img.shape)
-print("Minimum:", img.min())
-print("Maximum:", img.max())
 
-print("==================================================")
+# -----------------------------
+# تحليل الصورة
+# -----------------------------
+
+mask, ratio = detect_dark_spots(img)
+
+center = centroid(mask)
+
+score = risk_score(ratio)
+
+print("")
+print("========== Analysis ==========")
+print(f"Dark Ratio : {ratio:.4%}")
+print(f"Risk Score : {score}/100")
+
+if center:
+    print(f"Centroid   : X={center[0]}  Y={center[1]}")
+else:
+    print("Centroid   : Not found")
+
+print("==============================")
