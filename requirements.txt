@@ -1,4 +1,5 @@
 requests
 numpy
-python-dateutil
 Pillow
+python-dateutil
+scipy
