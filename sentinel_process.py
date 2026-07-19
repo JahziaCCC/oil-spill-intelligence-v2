@@ -21,16 +21,24 @@ def build_evalscript():
 
     return """
 //VERSION=3
+
 function setup() {
   return {
-    input:[{bands:["VV","dataMask"]}],
-    output:{bands:1,sampleType:"UINT8"}
+    input:[{
+        bands:["VV","dataMask"]
+    }],
+    output:{
+        bands:1,
+        sampleType:"UINT8"
+    }
   }
 }
+
 
 function toDB(x){
     return 10.0*Math.log(x)/Math.LN10;
 }
+
 
 function evaluatePixel(s){
 
@@ -55,49 +63,107 @@ def download_preview(bbox, time_from, time_to):
     token = get_token()
 
     headers = {
-        "Authorization": f"Bearer {token}"
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
     }
 
+
     body = {
+
         "input": {
+
             "bounds": {
+
                 "bbox": bbox,
+
                 "properties": {
                     "crs":"http://www.opengis.net/def/crs/EPSG/0/4326"
                 }
+
             },
+
+
             "data":[{
+
                 "type":"sentinel-1-grd",
+
                 "dataFilter":{
+
                     "timeRange":{
+
                         "from":iso_z(time_from),
+
                         "to":iso_z(time_to)
-                    }
+
+                    },
+
+                    "mosaickingOrder":"mostRecent"
+
                 }
+
             }]
+
         },
+
 
         "output":{
-            "width":cfg["tile_width"],
-            "height":cfg["tile_height"],
+
+            "width":cfg.get("tile_width",1024),
+
+            "height":cfg.get("tile_height",1024),
+
             "responses":[{
+
                 "identifier":"default",
-                "format":{"type":"image/png"}
+
+                "format":{
+                    "type":"image/png"
+                }
+
             }]
+
         },
 
+
         "evalscript":build_evalscript()
+
     }
 
-    r = requests.post(
-        PROCESS_API,
-        headers=headers,
-        json=body,
-        timeout=180
-    )
 
-    r.raise_for_status()
+    try:
 
-    img = Image.open(BytesIO(r.content)).convert("L")
+        r = requests.post(
+            PROCESS_API,
+            headers=headers,
+            json=body,
+            timeout=180
+        )
 
-    return np.array(img)
+
+        if not r.ok:
+
+            print("\n❌ Copernicus Process API Error")
+
+            print("Status:", r.status_code)
+
+            print(r.text[:1000])
+
+            return None
+
+
+
+        img = Image.open(
+            BytesIO(r.content)
+        ).convert("L")
+
+
+        return np.array(img)
+
+
+
+    except Exception as e:
+
+        print("\n❌ Preview download failed:")
+        print(e)
+
+        return None
