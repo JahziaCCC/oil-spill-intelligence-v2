@@ -1,12 +1,24 @@
 import os
-import requests
 import datetime as dt
+import requests
 
 TOKEN_URL = "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
-CATALOG_URL = "https://sh.dataspace.copernicus.eu/api/v1/catalog/1.0.0/search"
+BASE_URL = "https://sh.dataspace.copernicus.eu"
+
+CATALOG_SEARCH = f"{BASE_URL}/api/v1/catalog/1.0.0/search"
+PROCESS_API = f"{BASE_URL}/api/v1/process"
+
+
+def utc_now():
+    return dt.datetime.now(dt.timezone.utc)
+
+
+def iso_z(d):
+    return d.astimezone(dt.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def get_token():
+
     r = requests.post(
         TOKEN_URL,
         data={
@@ -14,19 +26,20 @@ def get_token():
             "client_id": os.environ["CDSE_CLIENT_ID"],
             "client_secret": os.environ["CDSE_CLIENT_SECRET"],
         },
-        timeout=30,
+        timeout=60,
     )
 
     r.raise_for_status()
+
     return r.json()["access_token"]
 
 
-def get_latest_scene():
+def get_latest_scene(bbox, hours=72):
 
     token = get_token()
 
-    now = dt.datetime.utcnow()
-    start = now - dt.timedelta(days=3)
+    end = utc_now()
+    start = end - dt.timedelta(hours=hours)
 
     headers = {
         "Authorization": f"Bearer {token}"
@@ -34,38 +47,29 @@ def get_latest_scene():
 
     body = {
         "collections": ["sentinel-1-grd"],
-        "datetime": f"{start.isoformat()}Z/{now.isoformat()}Z",
-        "bbox": [47.5, 24.0, 56.5, 30.8],   # الخليج العربي
-        "limit": 1
+        "bbox": bbox,
+        "datetime": f"{iso_z(start)}/{iso_z(end)}",
+        "limit": 1,
+        "fields": {
+            "include": [
+                "id",
+                "properties.datetime"
+            ]
+        }
     }
 
     r = requests.post(
-        CATALOG_URL,
+        CATALOG_SEARCH,
         headers=headers,
         json=body,
-        timeout=60
+        timeout=120
     )
 
     r.raise_for_status()
 
-    features = r.json()["features"]
+    features = r.json().get("features", [])
 
-    if len(features) == 0:
+    if not features:
         return None
 
-    return {
-        "scene": features[0]["id"],
-        "time": features[0]["properties"]["datetime"]
-    }
-
-
-if __name__ == "__main__":
-
-    scene = get_latest_scene()
-
-    if scene:
-        print("Latest Scene")
-        print(scene["scene"])
-        print(scene["time"])
-    else:
-        print("No scene found")
+    return features[0]
