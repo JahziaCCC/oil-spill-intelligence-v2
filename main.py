@@ -38,17 +38,9 @@ def load_config():
 
 
 
-print(
-    "=================================================="
-)
-
-print(
-    "Oil Spill Intelligence V2"
-)
-
-print(
-    "=================================================="
-)
+print("=" * 50)
+print("Oil Spill Intelligence V2")
+print("=" * 50)
 
 
 
@@ -94,13 +86,8 @@ for area in cfg["areas"]:
 
 
 
-    print(
-        "Scene:"
-    )
-
-    print(
-        scene["id"]
-    )
+    print("Scene:")
+    print(scene["id"])
 
 
 
@@ -120,13 +107,9 @@ for area in cfg["areas"]:
 
         area["bbox"],
 
-        scene_time - dt.timedelta(
-            minutes=10
-        ),
+        scene_time - dt.timedelta(minutes=10),
 
-        scene_time + dt.timedelta(
-            minutes=10
-        )
+        scene_time + dt.timedelta(minutes=10)
 
     )
 
@@ -149,16 +132,14 @@ for area in cfg["areas"]:
 
 
 
-    result = detect_dark_spots(
-        img
-    )
+    result = detect_dark_spots(img)
 
 
 
     if result is None:
 
         print(
-            "\n🟢 No dark spot detected."
+            "🟢 No dark spot detected."
         )
 
         continue
@@ -171,27 +152,32 @@ for area in cfg["areas"]:
 
 
 
-    print(
-        "\n🚨 Detection Result"
-    )
+    print("\n🚨 Detection Result")
+    print("----------------------")
 
-    print(
-        "----------------------"
-    )
 
     print(
         f"Area             : {result['area']/10000:.3f} km²"
     )
 
+
     print(
-        f"Risk Score       : {score}/100"
+        f"Risk Level       : {score['level']}"
+    )
+
+
+    print(
+        f"Risk Score       : {score['score']}/100"
     )
 
 
 
     confidence = min(
+
         result["ratio"] * 100 * 10,
+
         99
+
     )
 
 
@@ -203,9 +189,9 @@ for area in cfg["areas"]:
 
     lat, lon = pixel_to_geo(
 
-        result["center"][1],
-
         result["center"][0],
+
+        result["center"][1],
 
         area["bbox"],
 
@@ -215,13 +201,8 @@ for area in cfg["areas"]:
 
 
 
-    print(
-        "\n📍 Location"
-    )
-
-    print(
-        "----------------------"
-    )
+    print("\n📍 Location")
+    print("----------------------")
 
     print(
         f"Latitude         : {lat}"
@@ -234,18 +215,14 @@ for area in cfg["areas"]:
 
 
     shape = analyze_shape(
+
         result["mask"]
+
     )
 
 
-
-    print(
-        "\n🔬 Shape Analysis"
-    )
-
-    print(
-        "----------------------"
-    )
+    print("\n🔬 Shape Analysis")
+    print("----------------------")
 
 
     for k, v in shape.items():
@@ -256,7 +233,7 @@ for area in cfg["areas"]:
 
 
 
-        oil_result = calculate_oil_probability(
+    oil_result = calculate_oil_probability(
 
         dark_ratio=result["ratio"],
 
@@ -271,27 +248,26 @@ for area in cfg["areas"]:
     )
 
 
+
     probability = oil_result["probability"]
 
     classification = oil_result["classification"]
 
 
 
-    print(
-        "\n🛢 Oil Spill Probability"
-    )
+    print("\n🛢 Oil Spill Probability")
+    print("----------------------")
 
-    print(
-        "----------------------"
-    )
 
     print(
         f"Probability      : {probability}%"
     )
 
+
     print(
         f"Classification   : {classification}"
     )
+
 
 
     nearest = find_nearest_vessel(
@@ -306,16 +282,13 @@ for area in cfg["areas"]:
 
 
 
-    print(
-        "\n🚢 Vessel Correlation"
-    )
+    print("\n🚢 Vessel Correlation")
+    print("----------------------")
 
-    print(
-        "----------------------"
-    )
 
 
     vessel_score = 0
+
 
 
     if nearest:
@@ -325,9 +298,11 @@ for area in cfg["areas"]:
             f"Nearest Vessel : {nearest.get('name')}"
         )
 
+
         print(
             f"Distance       : {nearest.get('distance_km')} km"
         )
+
 
         print(
             f"Speed          : {nearest.get('speed')} knots"
@@ -361,21 +336,20 @@ for area in cfg["areas"]:
     )
 
 
-    print(
-        "\n🛢 Final Oil Spill Assessment"
-    )
 
-    print(
-        "----------------------"
-    )
+    print("\n🛢 Final Oil Spill Assessment")
+    print("----------------------")
+
 
     print(
         f"Satellite Probability : {probability}%"
     )
 
+
     print(
         f"Vessel Contribution  : +{vessel_score}%"
     )
+
 
     print(
         f"Final Probability    : {final_probability}%"
@@ -383,9 +357,8 @@ for area in cfg["areas"]:
 
 
 
-    print(
-        "\n🗺️ Creating Map..."
-    )
+    print("\n🗺️ Creating Map...")
+
 
 
     create_oil_spill_map(
@@ -394,9 +367,18 @@ for area in cfg["areas"]:
 
         lon,
 
-        final_probability
+        final_probability,
+
+        probability,
+
+        classification,
+
+        confidence,
+
+        scene["id"]
 
     )
+
 
 
     print(
@@ -405,14 +387,8 @@ for area in cfg["areas"]:
 
 
 
-print(
-    "\n=================================================="
-)
+print("\n" + "=" * 50)
 
-print(
-    "Finished"
-)
+print("Finished")
 
-print(
-    "=================================================="
-)
+print("=" * 50)
