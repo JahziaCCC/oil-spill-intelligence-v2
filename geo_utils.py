@@ -1,33 +1,69 @@
-import math
-
-
-# Sentinel-1 GRD Resolution (تقريبية)
-PIXEL_SIZE_M = 10
-
-
-def estimate_area_km2(area_pixels, bbox=None, image_shape=None):
+def pixel_to_geo(
+    x,
+    y,
+    bbox,
+    image_shape
+):
     """
-    حساب مساحة البقعة بالكيلومتر المربع
-    باستخدام دقة Sentinel-1
+    تحويل إحداثيات البكسل إلى إحداثيات جغرافية
 
-    Sentinel-1 GRD:
-    10m x 10m تقريباً لكل بكسل
-    """
+    bbox:
+    [
+        min_lon,
+        min_lat,
+        max_lon,
+        max_lat
+    ]
 
-    pixel_area_m2 = PIXEL_SIZE_M * PIXEL_SIZE_M
-
-    total_area_m2 = area_pixels * pixel_area_m2
-
-    total_area_km2 = total_area_m2 / 1_000_000
-
-    return round(total_area_km2, 3)
-
-
-
-def pixel_resolution():
+    أو:
+    [
+        [min_lon, min_lat],
+        [max_lon, max_lat]
+    ]
 
     """
-    إرجاع دقة البكسل المستخدمة
-    """
 
-    return PIXEL_SIZE_M
+    height, width = image_shape[:2]
+
+
+    # دعم شكلين للـ bbox
+    if isinstance(bbox[0], list):
+
+        min_lon = bbox[0][0]
+        min_lat = bbox[0][1]
+
+        max_lon = bbox[1][0]
+        max_lat = bbox[1][1]
+
+    else:
+
+        min_lon = bbox[0]
+        min_lat = bbox[1]
+
+        max_lon = bbox[2]
+        max_lat = bbox[3]
+
+
+
+    lon = (
+        min_lon
+        +
+        (x / width)
+        *
+        (max_lon - min_lon)
+    )
+
+
+    lat = (
+        max_lat
+        -
+        (y / height)
+        *
+        (max_lat - min_lat)
+    )
+
+
+    return (
+        round(lat, 6),
+        round(lon, 6)
+    )
