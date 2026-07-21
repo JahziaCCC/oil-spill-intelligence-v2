@@ -3,12 +3,16 @@ import datetime as dt
 
 from sentinel import get_latest_scene
 from sentinel_process import download_preview
+
 from oil_detector import (
     detect_dark_spots,
     risk_score,
     confidence
 )
+
 from geo_utils import estimate_area_km2
+
+from shape_analysis import analyze_shape
 
 
 
@@ -16,7 +20,7 @@ def load_config():
 
     with open("config.json", "r", encoding="utf-8") as f:
 
-        return json.load(f)
+        return json.load()
 
 
 
@@ -60,6 +64,7 @@ for area in cfg["areas"]:
 
 
 
+
     scene_time = dt.datetime.fromisoformat(
 
         scene["properties"]["datetime"].replace(
@@ -95,13 +100,13 @@ for area in cfg["areas"]:
 
 
 
+
     result = detect_dark_spots(img)
 
 
 
-    # عرض إحصائيات التحليل دائماً
-
     stats = result["stats"]
+
 
 
     print("\n🔎 Analysis Summary")
@@ -133,7 +138,6 @@ for area in cfg["areas"]:
     )
 
 
-
     if "valid_objects" in stats:
 
         print(
@@ -144,13 +148,13 @@ for area in cfg["areas"]:
 
     if not result["detected"]:
 
-
         print("\n🟢 No dark spot detected.")
 
         continue
 
 
 
+    # تحليل الخطورة
 
     risk = risk_score(
 
@@ -166,6 +170,9 @@ for area in cfg["areas"]:
     )
 
 
+
+    # حساب المساحة
+
     area_km2 = estimate_area_km2(
 
         result["area_pixels"],
@@ -173,6 +180,16 @@ for area in cfg["areas"]:
         area["bbox"],
 
         img.shape
+
+    )
+
+
+
+    # تحليل الشكل
+
+    shape = analyze_shape(
+
+        result["mask"]
 
     )
 
@@ -189,7 +206,7 @@ for area in cfg["areas"]:
 
 
     print(
-        f"Estimated Area   : {area_km2:.2f} km²"
+        f"Estimated Area   : {area_km2:.3f} km²"
     )
 
 
@@ -215,6 +232,27 @@ for area in cfg["areas"]:
 
     print(
         f"Center           : {result['center']}"
+    )
+
+
+
+    print("\n🔬 Shape Analysis")
+
+    print("----------------------")
+
+
+    print(
+        f"Perimeter        : {shape['perimeter']}"
+    )
+
+
+    print(
+        f"Elongation       : {shape['elongation']}"
+    )
+
+
+    print(
+        f"Compactness      : {shape['compactness']}"
     )
 
 
