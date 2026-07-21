@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
 
   schedule:
-    # تشغيل كل 6 ساعات
     - cron: "0 */6 * * *"
 
 
@@ -32,14 +31,22 @@ jobs:
           pip install -r requirements.txt
 
 
+      - name: Collect AIS Data
+        env:
+          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+
+        run: |
+          python ais_collector.py
+
+
       - name: Run Oil Spill Intelligence
+
         env:
 
-          # Copernicus Sentinel-1
           CDSE_CLIENT_ID: ${{ secrets.CDSE_CLIENT_ID }}
+
           CDSE_CLIENT_SECRET: ${{ secrets.CDSE_CLIENT_SECRET }}
 
-          # AIS Stream
           AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
 
         run: |
