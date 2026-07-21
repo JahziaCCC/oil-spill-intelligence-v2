@@ -8,7 +8,6 @@ def detect_dark_spots(img):
     img = img.astype(float)
 
 
-    # إزالة قيم NoData (الصفر)
     valid_pixels = img[img > 0]
 
 
@@ -24,7 +23,9 @@ def detect_dark_spots(img):
 
         "candidate_pixels": 0,
 
-        "objects_found": 0
+        "objects_found": 0,
+
+        "valid_objects": 0
 
     }
 
@@ -32,35 +33,29 @@ def detect_dark_spots(img):
 
     if len(valid_pixels) == 0:
 
-        return {
-
-            "detected": False,
-
-            "ratio": 0,
-
-            "area_pixels": 0,
-
-            "stats": stats
-
-        }
+        return None
 
 
 
-    # حساب العتبة من البيانات الحقيقية فقط
     threshold = np.percentile(
+
         valid_pixels,
+
         8
+
     )
 
 
     stats["threshold"] = round(
+
         float(threshold),
+
         2
+
     )
 
 
 
-    # البقع الداكنة فقط داخل البيانات الصحيحة
     mask = (
 
         (img > 0)
@@ -74,27 +69,34 @@ def detect_dark_spots(img):
 
 
     stats["candidate_pixels"] = int(
+
         np.sum(mask)
+
     )
 
 
 
-    # تنظيف الضوضاء
     mask = ndimage.binary_opening(
+
         mask,
+
         iterations=2
+
     )
 
 
-    # دمج المناطق القريبة
     mask = ndimage.binary_closing(
+
         mask,
+
         iterations=3
+
     )
 
 
 
     labels, count = ndimage.label(mask)
+
 
 
     stats["objects_found"] = int(count)
@@ -103,18 +105,7 @@ def detect_dark_spots(img):
 
     if count == 0:
 
-        return {
-
-            "detected": False,
-
-            "ratio":0,
-
-            "area_pixels":0,
-
-            "stats":stats
-
-        }
-
+        return None
 
 
 
@@ -129,8 +120,6 @@ def detect_dark_spots(img):
     )
 
 
-
-    # إزالة البقع الصغيرة جداً
 
     min_size = img.size * 0.00003
 
@@ -152,25 +141,11 @@ def detect_dark_spots(img):
 
     if len(valid_objects) == 0:
 
-        return {
-
-            "detected":False,
-
-            "ratio":0,
-
-            "area_pixels":0,
-
-            "stats":stats
-
-        }
+        return None
 
 
-
-
-    # اختيار أكبر بقعة
 
     largest = np.argmax(sizes) + 1
-
 
 
     largest_mask = labels == largest
@@ -178,7 +153,17 @@ def detect_dark_spots(img):
 
 
     area_pixels = int(
+
         sizes[largest - 1]
+
+    )
+
+
+
+    valid_area = np.sum(
+
+        img > 0
+
     )
 
 
@@ -187,7 +172,7 @@ def detect_dark_spots(img):
 
         area_pixels /
 
-        np.sum(img > 0)
+        valid_area
 
     )
 
@@ -203,7 +188,6 @@ def detect_dark_spots(img):
 
     return {
 
-
         "detected": True,
 
 
@@ -211,6 +195,14 @@ def detect_dark_spots(img):
 
 
         "ratio": float(ratio),
+
+
+        # مهم لـ main.py
+
+        "area": area_pixels,
+
+
+        "area_pixels": area_pixels,
 
 
         "center": (
@@ -222,12 +214,10 @@ def detect_dark_spots(img):
         ),
 
 
-        "area_pixels": area_pixels,
-
-
         "stats": stats
 
     }
+
 
 
 
@@ -239,31 +229,31 @@ def risk_score(ratio):
 
         return {
 
-            "level":"HIGH",
+            "level": "HIGH",
 
-            "score":90
-
-        }
-
-
-    elif ratio >=0.02:
-
-        return {
-
-            "level":"MEDIUM",
-
-            "score":70
+            "score": 90
 
         }
 
 
-    elif ratio >=0.005:
+    elif ratio >= 0.02:
 
         return {
 
-            "level":"LOW",
+            "level": "MEDIUM",
 
-            "score":50
+            "score": 70
+
+        }
+
+
+    elif ratio >= 0.005:
+
+        return {
+
+            "level": "LOW",
+
+            "score": 50
 
         }
 
@@ -272,11 +262,12 @@ def risk_score(ratio):
 
         return {
 
-            "level":"VERY LOW",
+            "level": "VERY LOW",
 
-            "score":20
+            "score": 20
 
         }
+
 
 
 
@@ -293,4 +284,10 @@ def confidence(ratio):
     )
 
 
-    return round(value,2)
+    return round(
+
+        value,
+
+        2
+
+    )
