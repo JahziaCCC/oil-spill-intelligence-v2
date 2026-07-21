@@ -1,84 +1,117 @@
 import json
 import datetime as dt
-import asyncio
 
 from sentinel import get_latest_scene
 from sentinel_process import download_preview
 
 from oil_detector import (
     detect_dark_spots,
-    risk_score,
-    confidence
+    risk_score
 )
-
-from geo_utils import estimate_area_km2
 
 from shape_analysis import analyze_shape
 
-from oil_probability import calculate_oil_probability
+from oil_probability import oil_probability
 
-from geo_location import pixel_to_geo
+from geo_utils import pixel_to_geo
 
-from oil_spill_map import create_oil_spill_map
+from ais_reader import load_vessels
 
-from ais_correlation import (
+from vessel_correlation import (
     find_nearest_vessel,
     vessel_risk_score
 )
 
-from ais_stream import get_vessels
+from oil_spill_map import create_oil_spill_map
 
 
 
 def load_config():
 
-    with open("config.json", "r", encoding="utf-8") as f:
+    with open(
+        "config.json",
+        "r",
+        encoding="utf-8"
+    ) as f:
 
         return json.load(f)
 
 
 
-print("==================================================")
-print("Oil Spill Intelligence V2")
-print("==================================================")
+print(
+    "=================================================="
+)
+
+print(
+    "Oil Spill Intelligence V2"
+)
+
+print(
+    "=================================================="
+)
+
 
 
 cfg = load_config()
 
 
 
+print("\n📡 Loading AIS Cache...")
+
+vessels = load_vessels()
+
+print(
+    "AIS Vessels Loaded:",
+    len(vessels)
+)
+
+
+
 for area in cfg["areas"]:
 
 
-    print(f"\n📍 المنطقة: {area['name_ar']}")
-
+    print(
+        f"\n📍 المنطقة: {area['name_ar']}"
+    )
 
 
     scene = get_latest_scene(
-        area["bbox"],
-        cfg["lookback_hours"]
-    )
 
+        area["bbox"],
+
+        cfg["lookback_hours"]
+
+    )
 
 
     if scene is None:
 
-        print("No Sentinel-1 scene found.")
+        print(
+            "No Sentinel-1 scene found."
+        )
 
         continue
 
 
 
-    print("Scene:")
-    print(scene["id"])
+    print(
+        "Scene:"
+    )
+
+    print(
+        scene["id"]
+    )
 
 
 
     scene_time = dt.datetime.fromisoformat(
-        scene["properties"]["datetime"].replace(
+
+        scene["properties"]["datetime"]
+        .replace(
             "Z",
             "+00:00"
         )
+
     )
 
 
@@ -87,9 +120,13 @@ for area in cfg["areas"]:
 
         area["bbox"],
 
-        scene_time - dt.timedelta(minutes=10),
+        scene_time - dt.timedelta(
+            minutes=10
+        ),
 
-        scene_time + dt.timedelta(minutes=10)
+        scene_time + dt.timedelta(
+            minutes=10
+        )
 
     )
 
@@ -97,186 +134,157 @@ for area in cfg["areas"]:
 
     if img is None:
 
-        print("Image download failed.")
+        print(
+            "Image download failed."
+        )
 
         continue
 
 
 
-    print("Image:", img.shape)
+    print(
+        "Image:",
+        img.shape
+    )
 
 
 
-    result = detect_dark_spots(img)
-
-    stats = result["stats"]
-
-
-
-    print("\n🔎 Analysis Summary")
-    print("----------------------")
-
-    print(f"Image Mean      : {stats['image_mean']}")
-    print(f"Min Value       : {stats['image_min']}")
-    print(f"Max Value       : {stats['image_max']}")
-    print(f"Dark Threshold  : {stats['threshold']}")
-    print(f"Candidate Pixels: {stats['candidate_pixels']:,}")
-    print(f"Objects Found   : {stats['objects_found']}")
+    result = detect_dark_spots(
+        img
+    )
 
 
 
-    if not result["detected"]:
+    if result is None:
 
-        print("\n🟢 No dark spot detected.")
+        print(
+            "\n🟢 No dark spot detected."
+        )
 
         continue
 
 
 
-    risk = risk_score(
-        result["ratio"]
-    )
-
-
-    conf = confidence(
+    score = risk_score(
         result["ratio"]
     )
 
 
 
-    area_km2 = estimate_area_km2(
+    print(
+        "\n🚨 Detection Result"
+    )
 
-        result["area_pixels"],
+    print(
+        "----------------------"
+    )
+
+    print(
+        f"Area             : {result['area']/10000:.3f} km²"
+    )
+
+    print(
+        f"Risk Score       : {score}/100"
+    )
+
+
+
+    confidence = min(
+        result["ratio"] * 100 * 10,
+        99
+    )
+
+
+    print(
+        f"Confidence       : {confidence:.2f}%"
+    )
+
+
+
+    lat, lon = pixel_to_geo(
+
+        result["center"][1],
+
+        result["center"][0],
 
         area["bbox"],
 
         img.shape
 
+    )
+
+
+
+    print(
+        "\n📍 Location"
+    )
+
+    print(
+        "----------------------"
+    )
+
+    print(
+        f"Latitude         : {lat}"
+    )
+
+    print(
+        f"Longitude        : {lon}"
     )
 
 
 
     shape = analyze_shape(
-
         result["mask"]
-
     )
 
 
-
-    location = pixel_to_geo(
-
-        result["center"][0],
-
-        result["center"][1],
-
-        area["bbox"],
-
-        img.shape
-
-    )
-
-
-
-    probability = calculate_oil_probability(
-
-        dark_ratio=result["ratio"],
-
-        area_km2=area_km2,
-
-        elongation=shape["elongation"],
-
-        compactness=shape["compactness"],
-
-        confidence=conf
-
-    )
-
-
-
-    print("\n🚨 Detection Result")
-    print("----------------------")
 
     print(
-        f"Area             : {area_km2:.3f} km²"
+        "\n🔬 Shape Analysis"
     )
 
     print(
-        f"Risk Score       : {risk['score']}/100"
-    )
-
-    print(
-        f"Confidence       : {conf}%"
+        "----------------------"
     )
 
 
-
-    print("\n📍 Location")
-    print("----------------------")
-
-    print(
-        f"Latitude         : {location['latitude']}"
-    )
-
-    print(
-        f"Longitude        : {location['longitude']}"
-    )
-
-
-
-    # ==========================
-    # AIS REAL DATA
-    # ==========================
-
-
-    print("\n📡 Connecting AISStream...")
-
-
-
-    try:
-
-        vessels = asyncio.run(
-
-            get_vessels(
-
-                area["bbox"],
-
-                seconds=30
-
-            )
-
-        )
-
-
-    except Exception as e:
-
+    for k, v in shape.items():
 
         print(
-            "AIS Error:",
-            e
+            f"{k.capitalize():16}: {v}"
         )
 
-        vessels = []
 
 
+    probability = oil_probability(
 
-    print(
-        "AIS Vessels Received:",
-        len(vessels)
+        result["ratio"],
+
+        shape
+
     )
 
 
 
-    print("\n🚢 Vessel Correlation")
-    print("----------------------")
+    print(
+        "\n🛢 Oil Spill Probability"
+    )
+
+    print(
+        "----------------------"
+    )
+
+    print(
+        f"Probability      : {probability}%"
+    )
 
 
 
     nearest = find_nearest_vessel(
 
-        location["latitude"],
+        lat,
 
-        location["longitude"],
+        lon,
 
         vessels
 
@@ -284,12 +292,16 @@ for area in cfg["areas"]:
 
 
 
-    vessel_score = vessel_risk_score(
-
-        nearest
-
+    print(
+        "\n🚢 Vessel Correlation"
     )
 
+    print(
+        "----------------------"
+    )
+
+
+    vessel_score = 0
 
 
     if nearest:
@@ -300,10 +312,6 @@ for area in cfg["areas"]:
         )
 
         print(
-            f"MMSI           : {nearest.get('mmsi')}"
-        )
-
-        print(
             f"Distance       : {nearest.get('distance_km')} km"
         )
 
@@ -311,13 +319,18 @@ for area in cfg["areas"]:
             f"Speed          : {nearest.get('speed')} knots"
         )
 
+
+        vessel_score = vessel_risk_score(
+            nearest
+        )
+
+
         print(
             f"Vessel Risk    : +{vessel_score}"
         )
 
 
     else:
-
 
         print(
             "Nearest Vessel : None"
@@ -327,19 +340,23 @@ for area in cfg["areas"]:
 
     final_probability = min(
 
-        100,
+        probability + vessel_score,
 
-        probability["probability"] + vessel_score
+        99
 
     )
 
 
-
-    print("\n🛢 Final Oil Spill Assessment")
-    print("----------------------")
+    print(
+        "\n🛢 Final Oil Spill Assessment"
+    )
 
     print(
-        f"Satellite Probability : {probability['probability']}%"
+        "----------------------"
+    )
+
+    print(
+        f"Satellite Probability : {probability}%"
     )
 
     print(
@@ -352,31 +369,36 @@ for area in cfg["areas"]:
 
 
 
+    print(
+        "\n🗺️ Creating Map..."
+    )
+
+
     create_oil_spill_map(
 
-        latitude=location["latitude"],
+        lat,
 
-        longitude=location["longitude"],
+        lon,
 
-        area_km2=area_km2,
-
-        probability=final_probability,
-
-        classification=probability["classification"],
-
-        confidence=conf,
-
-        scene_id=scene["id"]
+        final_probability
 
     )
 
 
+    print(
+        "🗺️ Map Created"
+    )
 
-    print("\n🗺️ Map Created")
 
 
+print(
+    "\n=================================================="
+)
 
+print(
+    "Finished"
+)
 
-print("\n==================================================")
-print("Finished")
-print("==================================================")
+print(
+    "=================================================="
+)
