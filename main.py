@@ -20,7 +20,7 @@ def load_config():
 
     with open("config.json", "r", encoding="utf-8") as f:
 
-        return json.load()
+        return json.load(f)
 
 
 
@@ -41,13 +41,9 @@ for area in cfg["areas"]:
 
 
     scene = get_latest_scene(
-
         area["bbox"],
-
         cfg["lookback_hours"]
-
     )
-
 
 
     if scene is None:
@@ -59,31 +55,23 @@ for area in cfg["areas"]:
 
 
     print("Scene:")
-
     print(scene["id"])
 
 
 
-
     scene_time = dt.datetime.fromisoformat(
-
         scene["properties"]["datetime"].replace(
             "Z",
             "+00:00"
         )
-
     )
 
 
 
     img = download_preview(
-
         area["bbox"],
-
         scene_time - dt.timedelta(minutes=10),
-
         scene_time + dt.timedelta(minutes=10)
-
     )
 
 
@@ -100,7 +88,6 @@ for area in cfg["areas"]:
 
 
 
-
     result = detect_dark_spots(img)
 
 
@@ -110,7 +97,6 @@ for area in cfg["areas"]:
 
 
     print("\n🔎 Analysis Summary")
-
     print("----------------------")
 
     print(
@@ -154,49 +140,32 @@ for area in cfg["areas"]:
 
 
 
-    # تحليل الخطورة
-
     risk = risk_score(
-
         result["ratio"]
-
     )
 
 
     conf = confidence(
-
         result["ratio"]
-
     )
 
 
-
-    # حساب المساحة
 
     area_km2 = estimate_area_km2(
-
         result["area_pixels"],
-
         area["bbox"],
-
         img.shape
-
     )
 
 
 
-    # تحليل الشكل
-
     shape = analyze_shape(
-
         result["mask"]
-
     )
 
 
 
     print("\n🚨 Detection Result")
-
     print("----------------------")
 
 
@@ -237,7 +206,6 @@ for area in cfg["areas"]:
 
 
     print("\n🔬 Shape Analysis")
-
     print("----------------------")
 
 
@@ -259,7 +227,5 @@ for area in cfg["areas"]:
 
 
 print("\n==================================================")
-
 print("Finished")
-
 print("==================================================")
