@@ -9,12 +9,9 @@ AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
 
 def get_ais_key():
 
-    key = os.getenv(
-        "AISSTREAM_API_KEY"
-    )
+    key = os.getenv("AISSTREAM_API_KEY")
 
     if not key:
-
         raise ValueError(
             "AISSTREAM_API_KEY is missing"
         )
@@ -25,14 +22,8 @@ def get_ais_key():
 
 async def get_vessels(
     bbox,
-    seconds=30
+    seconds=60
 ):
-    """
-    جلب السفن القريبة من منطقة محددة
-
-    bbox:
-    [minLon,minLat,maxLon,maxLat]
-    """
 
     api_key = get_ais_key()
 
@@ -74,15 +65,37 @@ async def get_vessels(
 
     try:
 
+
+        print(
+            "Connecting AISStream..."
+        )
+
+
         async with websockets.connect(
-            AISSTREAM_URL
+
+            AISSTREAM_URL,
+
+            open_timeout=60,
+
+            ping_interval=20,
+
+            ping_timeout=60
+
         ) as websocket:
 
 
+
+            print(
+                "AISStream Connected"
+            )
+
+
             await websocket.send(
+
                 json.dumps(
                     subscribe_message
                 )
+
             )
 
 
@@ -94,19 +107,40 @@ async def get_vessels(
             while True:
 
 
-                if (
+                elapsed = (
+
                     asyncio.get_event_loop().time()
+
                     -
+
                     start
-                    >
-                    seconds
-                ):
+
+                )
+
+
+
+                if elapsed > seconds:
 
                     break
 
 
 
-                message = await websocket.recv()
+                try:
+
+
+                    message = await asyncio.wait_for(
+
+                        websocket.recv(),
+
+                        timeout=10
+
+                    )
+
+
+                except asyncio.TimeoutError:
+
+                    continue
+
 
 
                 data = json.loads(
@@ -121,16 +155,14 @@ async def get_vessels(
                 )
 
 
-                message_data = data.get(
+                msg = data.get(
                     "Message",
                     {}
                 )
 
 
-
-                position = message_data.get(
-                    "PositionReport",
-                    {}
+                position = msg.get(
+                    "PositionReport"
                 )
 
 
@@ -148,20 +180,24 @@ async def get_vessels(
                                 "Unknown"
                             ),
 
+
                             "mmsi":
                             meta.get(
                                 "MMSI"
                             ),
+
 
                             "lat":
                             position.get(
                                 "Latitude"
                             ),
 
+
                             "lon":
                             position.get(
                                 "Longitude"
                             ),
+
 
                             "speed":
                             position.get(
@@ -176,6 +212,7 @@ async def get_vessels(
 
 
     except Exception as e:
+
 
         print(
             "AIS Error:",
