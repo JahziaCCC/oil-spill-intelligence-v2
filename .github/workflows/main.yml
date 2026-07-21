@@ -2,27 +2,53 @@ name: Oil Spill Intelligence V2
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 */6 * * *"
+
 
 jobs:
-  test:
+
+  oil-spill-monitor:
+
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install packages
+
+
+      - name: Install dependencies
         run: |
+
           pip install -r requirements.txt
 
-      - name: Run
+
+
+      - name: Run Oil Spill Intelligence
         env:
+
+          # Copernicus Sentinel-1
+
           CDSE_CLIENT_ID: ${{ secrets.CDSE_CLIENT_ID }}
+
           CDSE_CLIENT_SECRET: ${{ secrets.CDSE_CLIENT_SECRET }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+
+          # AISStream
+
+          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+
+
         run: |
+
           python main.py
