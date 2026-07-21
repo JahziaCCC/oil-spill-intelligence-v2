@@ -1,23 +1,23 @@
-name: Oil Spill Intelligence V2
+name: AISStream Test
 
 on:
   workflow_dispatch:
+
   schedule:
     - cron: "0 */6 * * *"
 
 
 jobs:
 
-  oil-spill-monitor:
+  ais-test:
 
     runs-on: ubuntu-latest
 
 
     steps:
 
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
-
 
 
       - name: Setup Python
@@ -26,29 +26,14 @@ jobs:
           python-version: "3.11"
 
 
-
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
-
-          pip install -r requirements.txt
-
+          pip install websockets
 
 
-      - name: Run Oil Spill Intelligence
+      - name: Run AIS Test
         env:
-
-          # Copernicus Sentinel-1
-
-          CDSE_CLIENT_ID: ${{ secrets.CDSE_CLIENT_ID }}
-
-          CDSE_CLIENT_SECRET: ${{ secrets.CDSE_CLIENT_SECRET }}
-
-
-          # AISStream
-
           AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
 
-
         run: |
-
-          python main.py
+          python ais_test.py
