@@ -73,7 +73,7 @@ async def get_vessels(bbox, seconds=60):
 
             ssl=ssl_context,
 
-            open_timeout=120,
+            open_timeout=30,
 
             ping_interval=20,
 
