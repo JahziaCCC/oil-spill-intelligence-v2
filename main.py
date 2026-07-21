@@ -20,6 +20,11 @@ from geo_location import pixel_to_geo
 
 from oil_spill_map import create_oil_spill_map
 
+from ais_correlation import (
+    find_nearest_vessel,
+    vessel_risk_score
+)
+
 
 
 def load_config():
@@ -112,12 +117,6 @@ for area in cfg["areas"]:
 
 
 
-    if "valid_objects" in stats:
-
-        print(f"Valid Objects   : {stats['valid_objects']}")
-
-
-
     if not result["detected"]:
 
         print("\n🟢 No dark spot detected.")
@@ -126,14 +125,9 @@ for area in cfg["areas"]:
 
 
 
-    risk = risk_score(
-        result["ratio"]
-    )
+    risk = risk_score(result["ratio"])
 
-
-    conf = confidence(
-        result["ratio"]
-    )
+    conf = confidence(result["ratio"])
 
 
 
@@ -145,8 +139,15 @@ for area in cfg["areas"]:
 
 
 
-    shape = analyze_shape(
-        result["mask"]
+    shape = analyze_shape(result["mask"])
+
+
+
+    location = pixel_to_geo(
+        result["center"][0],
+        result["center"][1],
+        area["bbox"],
+        img.shape
     )
 
 
@@ -167,50 +168,12 @@ for area in cfg["areas"]:
 
 
 
-    location = pixel_to_geo(
-
-        result["center"][0],
-
-        result["center"][1],
-
-        area["bbox"],
-
-        img.shape
-
-    )
-
-
-
     print("\n🚨 Detection Result")
     print("----------------------")
 
-    print(
-        f"Dark Area Pixels : {result['area_pixels']:,}"
-    )
-
-    print(
-        f"Estimated Area   : {area_km2:.3f} km²"
-    )
-
-    print(
-        f"Dark Ratio       : {result['ratio']:.4%}"
-    )
-
-    print(
-        f"Risk Level       : {risk['level']}"
-    )
-
-    print(
-        f"Risk Score       : {risk['score']}/100"
-    )
-
-    print(
-        f"Confidence       : {conf}%"
-    )
-
-    print(
-        f"Center Pixel     : {result['center']}"
-    )
+    print(f"Area             : {area_km2:.3f} km²")
+    print(f"Risk Score       : {risk['score']}/100")
+    print(f"Confidence       : {conf}%")
 
 
 
@@ -227,42 +190,99 @@ for area in cfg["areas"]:
 
 
 
-    print("\n🔬 Shape Analysis")
+    print("\n🚢 Vessel Correlation")
+    print("----------------------")
+
+
+
+    # بيانات اختبار مؤقتة
+    vessels = [
+
+        {
+            "name": "Test Vessel A",
+            "imo": "123456789",
+            "lat": 24.35,
+            "lon": 49.91,
+            "speed": 8
+        }
+
+    ]
+
+
+
+    nearest = find_nearest_vessel(
+
+        location["latitude"],
+
+        location["longitude"],
+
+        vessels
+
+    )
+
+
+
+    vessel_score = vessel_risk_score(
+        nearest
+    )
+
+
+
+    if nearest:
+
+        print(
+            f"Nearest Vessel : {nearest['name']}"
+        )
+
+        print(
+            f"Distance       : {nearest['distance_km']} km"
+        )
+
+        print(
+            f"Speed          : {nearest['speed']} knots"
+        )
+
+        print(
+            f"Vessel Risk    : +{vessel_score}"
+        )
+
+    else:
+
+        print(
+            "Nearest Vessel : None"
+        )
+
+
+
+    final_probability = min(
+
+        100,
+
+        probability["probability"] + vessel_score
+
+    )
+
+
+
+    print("\n🛢 Final Oil Spill Assessment")
+
     print("----------------------")
 
     print(
-        f"Perimeter        : {shape['perimeter']}"
+        f"Satellite Probability : {probability['probability']}%"
     )
 
     print(
-        f"Elongation       : {shape['elongation']}"
+        f"Vessel Contribution  : +{vessel_score}%"
     )
 
     print(
-        f"Compactness      : {shape['compactness']}"
+        f"Final Probability    : {final_probability}%"
     )
 
 
 
-    print("\n🛢 Oil Spill Probability")
-    print("----------------------")
-
-    print(
-        f"Probability      : {probability['probability']}%"
-    )
-
-    print(
-        f"Classification   : {probability['classification']}"
-    )
-
-
-
-    # إنشاء الخريطة
-
-    print("\n🗺️ Creating Map...")
-
-
-    map_file = create_oil_spill_map(
+    create_oil_spill_map(
 
         latitude=location["latitude"],
 
@@ -270,7 +290,7 @@ for area in cfg["areas"]:
 
         area_km2=area_km2,
 
-        probability=probability["probability"],
+        probability=final_probability,
 
         classification=probability["classification"],
 
@@ -282,13 +302,7 @@ for area in cfg["areas"]:
 
 
 
-    print("\n🗺️ Map")
-
-    print("----------------------")
-
-    print(
-        f"✅ Created: {map_file}"
-    )
+    print("\n🗺️ Map Created")
 
 
 
