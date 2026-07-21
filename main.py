@@ -18,15 +18,13 @@ from oil_probability import calculate_oil_probability
 
 from geo_location import pixel_to_geo
 
-from oil_spill_map import create_oil_spill_map
-
 
 
 def load_config():
 
     with open("config.json", "r", encoding="utf-8") as f:
 
-        return json.load()
+        return json.load(f)
 
 
 
@@ -196,9 +194,12 @@ for area in cfg["areas"]:
 
     print(f"Confidence       : {conf}%")
 
+    print(f"Center Pixel     : {result['center']}")
+
 
 
     print("\n📍 Location")
+
     print("----------------------")
 
     print(
@@ -212,6 +213,7 @@ for area in cfg["areas"]:
 
 
     print("\n🔬 Shape Analysis")
+
     print("----------------------")
 
     print(f"Perimeter        : {shape['perimeter']}")
@@ -223,6 +225,7 @@ for area in cfg["areas"]:
 
 
     print("\n🛢 Oil Spill Probability")
+
     print("----------------------")
 
     print(
@@ -231,37 +234,6 @@ for area in cfg["areas"]:
 
     print(
         f"Classification   : {probability['classification']}"
-    )
-
-
-
-    # إنشاء الخريطة
-
-    map_file = create_oil_spill_map(
-
-        latitude=location["latitude"],
-
-        longitude=location["longitude"],
-
-        area_km2=area_km2,
-
-        probability=probability["probability"],
-
-        classification=probability["classification"],
-
-        confidence=conf,
-
-        scene_id=scene["id"]
-
-    )
-
-
-    print("\n🗺️ Map")
-
-    print("----------------------")
-
-    print(
-        f"✅ Created: {map_file}"
     )
 
 
