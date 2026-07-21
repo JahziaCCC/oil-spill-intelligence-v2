@@ -16,6 +16,8 @@ from shape_analysis import analyze_shape
 
 from oil_probability import calculate_oil_probability
 
+from geo_location import pixel_to_geo
+
 
 
 def load_config():
@@ -71,13 +73,9 @@ for area in cfg["areas"]:
 
 
     img = download_preview(
-
         area["bbox"],
-
         scene_time - dt.timedelta(minutes=10),
-
         scene_time + dt.timedelta(minutes=10)
-
     )
 
 
@@ -96,26 +94,18 @@ for area in cfg["areas"]:
 
     result = detect_dark_spots(img)
 
-
-
     stats = result["stats"]
 
 
 
     print("\n🔎 Analysis Summary")
-
     print("----------------------")
 
     print(f"Image Mean      : {stats['image_mean']}")
-
     print(f"Min Value       : {stats['image_min']}")
-
     print(f"Max Value       : {stats['image_max']}")
-
     print(f"Dark Threshold  : {stats['threshold']}")
-
     print(f"Candidate Pixels: {stats['candidate_pixels']:,}")
-
     print(f"Objects Found   : {stats['objects_found']}")
 
 
@@ -146,21 +136,15 @@ for area in cfg["areas"]:
 
 
     area_km2 = estimate_area_km2(
-
         result["area_pixels"],
-
         area["bbox"],
-
         img.shape
-
     )
 
 
 
     shape = analyze_shape(
-
         result["mask"]
-
     )
 
 
@@ -181,8 +165,21 @@ for area in cfg["areas"]:
 
 
 
-    print("\n🚨 Detection Result")
+    location = pixel_to_geo(
 
+        result["center"][0],
+
+        result["center"][1],
+
+        area["bbox"],
+
+        img.shape
+
+    )
+
+
+
+    print("\n🚨 Detection Result")
     print("----------------------")
 
     print(f"Dark Area Pixels : {result['area_pixels']:,}")
@@ -197,7 +194,21 @@ for area in cfg["areas"]:
 
     print(f"Confidence       : {conf}%")
 
-    print(f"Center           : {result['center']}")
+    print(f"Center Pixel     : {result['center']}")
+
+
+
+    print("\n📍 Location")
+
+    print("----------------------")
+
+    print(
+        f"Latitude         : {location['latitude']}"
+    )
+
+    print(
+        f"Longitude        : {location['longitude']}"
+    )
 
 
 
@@ -229,7 +240,5 @@ for area in cfg["areas"]:
 
 
 print("\n==================================================")
-
 print("Finished")
-
 print("==================================================")
