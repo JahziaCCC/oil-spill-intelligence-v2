@@ -1,5 +1,6 @@
 import json
 import datetime as dt
+import asyncio
 
 from sentinel import get_latest_scene
 from sentinel_process import download_preview
@@ -24,6 +25,8 @@ from ais_correlation import (
     find_nearest_vessel,
     vessel_risk_score
 )
+
+from ais_stream import get_vessels
 
 
 
@@ -57,6 +60,7 @@ for area in cfg["areas"]:
     )
 
 
+
     if scene is None:
 
         print("No Sentinel-1 scene found.")
@@ -80,9 +84,13 @@ for area in cfg["areas"]:
 
 
     img = download_preview(
+
         area["bbox"],
+
         scene_time - dt.timedelta(minutes=10),
+
         scene_time + dt.timedelta(minutes=10)
+
     )
 
 
@@ -125,29 +133,47 @@ for area in cfg["areas"]:
 
 
 
-    risk = risk_score(result["ratio"])
+    risk = risk_score(
+        result["ratio"]
+    )
 
-    conf = confidence(result["ratio"])
 
-
-
-    area_km2 = estimate_area_km2(
-        result["area_pixels"],
-        area["bbox"],
-        img.shape
+    conf = confidence(
+        result["ratio"]
     )
 
 
 
-    shape = analyze_shape(result["mask"])
+    area_km2 = estimate_area_km2(
+
+        result["area_pixels"],
+
+        area["bbox"],
+
+        img.shape
+
+    )
+
+
+
+    shape = analyze_shape(
+
+        result["mask"]
+
+    )
 
 
 
     location = pixel_to_geo(
+
         result["center"][0],
+
         result["center"][1],
+
         area["bbox"],
+
         img.shape
+
     )
 
 
@@ -171,9 +197,17 @@ for area in cfg["areas"]:
     print("\n🚨 Detection Result")
     print("----------------------")
 
-    print(f"Area             : {area_km2:.3f} km²")
-    print(f"Risk Score       : {risk['score']}/100")
-    print(f"Confidence       : {conf}%")
+    print(
+        f"Area             : {area_km2:.3f} km²"
+    )
+
+    print(
+        f"Risk Score       : {risk['score']}/100"
+    )
+
+    print(
+        f"Confidence       : {conf}%"
+    )
 
 
 
@@ -190,23 +224,51 @@ for area in cfg["areas"]:
 
 
 
+    # ==========================
+    # AIS REAL DATA
+    # ==========================
+
+
+    print("\n📡 Connecting AISStream...")
+
+
+
+    try:
+
+        vessels = asyncio.run(
+
+            get_vessels(
+
+                area["bbox"],
+
+                seconds=30
+
+            )
+
+        )
+
+
+    except Exception as e:
+
+
+        print(
+            "AIS Error:",
+            e
+        )
+
+        vessels = []
+
+
+
+    print(
+        "AIS Vessels Received:",
+        len(vessels)
+    )
+
+
+
     print("\n🚢 Vessel Correlation")
     print("----------------------")
-
-
-
-    # بيانات اختبار مؤقتة
-    vessels = [
-
-        {
-            "name": "Test Vessel A",
-            "imo": "123456789",
-            "lat": 24.35,
-            "lon": 49.91,
-            "speed": 8
-        }
-
-    ]
 
 
 
@@ -223,30 +285,39 @@ for area in cfg["areas"]:
 
 
     vessel_score = vessel_risk_score(
+
         nearest
+
     )
 
 
 
     if nearest:
 
+
         print(
-            f"Nearest Vessel : {nearest['name']}"
+            f"Nearest Vessel : {nearest.get('name')}"
         )
 
         print(
-            f"Distance       : {nearest['distance_km']} km"
+            f"MMSI           : {nearest.get('mmsi')}"
         )
 
         print(
-            f"Speed          : {nearest['speed']} knots"
+            f"Distance       : {nearest.get('distance_km')} km"
+        )
+
+        print(
+            f"Speed          : {nearest.get('speed')} knots"
         )
 
         print(
             f"Vessel Risk    : +{vessel_score}"
         )
 
+
     else:
+
 
         print(
             "Nearest Vessel : None"
@@ -265,7 +336,6 @@ for area in cfg["areas"]:
 
 
     print("\n🛢 Final Oil Spill Assessment")
-
     print("----------------------")
 
     print(
