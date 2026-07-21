@@ -256,18 +256,24 @@ for area in cfg["areas"]:
 
 
 
-    oil_result = calculate_oil_probability(
-    dark_ratio=result["ratio"],
-    area_km2=result["area"] / 10000,
-    elongation=shape["elongation"],
-    compactness=shape["compactness"],
-    confidence=confidence
-)
+        oil_result = calculate_oil_probability(
 
-probability = oil_result["probability"]
-classification = oil_result["classification"]
+        dark_ratio=result["ratio"],
+
+        area_km2=result["area"] / 10000,
+
+        elongation=shape["elongation"],
+
+        compactness=shape["compactness"],
+
+        confidence=confidence
 
     )
+
+
+    probability = oil_result["probability"]
+
+    classification = oil_result["classification"]
 
 
 
@@ -283,6 +289,9 @@ classification = oil_result["classification"]
         f"Probability      : {probability}%"
     )
 
+    print(
+        f"Classification   : {classification}"
+    )
 
 
     nearest = find_nearest_vessel(
