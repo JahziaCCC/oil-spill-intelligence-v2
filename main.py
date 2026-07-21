@@ -11,7 +11,7 @@ from oil_detector import (
 
 from shape_analysis import analyze_shape
 
-from oil_probability import oil_probability
+from oil_probability import calculate_oil_probability
 
 from geo_utils import pixel_to_geo
 
@@ -256,11 +256,16 @@ for area in cfg["areas"]:
 
 
 
-    probability = oil_probability(
+    oil_result = calculate_oil_probability(
+    dark_ratio=result["ratio"],
+    area_km2=result["area"] / 10000,
+    elongation=shape["elongation"],
+    compactness=shape["compactness"],
+    confidence=confidence
+)
 
-        result["ratio"],
-
-        shape
+probability = oil_result["probability"]
+classification = oil_result["classification"]
 
     )
 
