@@ -1,15 +1,16 @@
-name: AISStream Test
+name: Oil Spill Intelligence V2
 
 on:
   workflow_dispatch:
 
   schedule:
+    # تشغيل كل 6 ساعات
     - cron: "0 */6 * * *"
 
 
 jobs:
 
-  ais-test:
+  oil-spill-monitor:
 
     runs-on: ubuntu-latest
 
@@ -28,12 +29,18 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install websockets
+          pip install -r requirements.txt
 
 
-      - name: Run AIS Test
+      - name: Run Oil Spill Intelligence
         env:
+
+          # Copernicus Sentinel-1
+          CDSE_CLIENT_ID: ${{ secrets.CDSE_CLIENT_ID }}
+          CDSE_CLIENT_SECRET: ${{ secrets.CDSE_CLIENT_SECRET }}
+
+          # AIS Stream
           AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
 
         run: |
-          python ais_test.py
+          python main.py
