@@ -8,9 +8,6 @@ def haversine_distance(
     lat2,
     lon2
 ):
-    """
-    حساب المسافة بين نقطتين بالكيلومتر
-    """
 
     R = 6371
 
@@ -51,36 +48,27 @@ def haversine_distance(
 
 
 
-def find_nearest_vessel(
+
+def find_nearby_vessels(
     spill_lat,
     spill_lon,
     vessels,
     max_distance_km=20
 ):
-    """
-    البحث عن أقرب سفينة من موقع الاشتباه
 
-    vessels مثال:
-
-    [
-        {
-            "name":"Ship A",
-            "imo":"1234567",
-            "lat":24.33,
-            "lon":49.89,
-            "speed":8
-        }
-    ]
-
-    """
-
-    nearest = None
-
-    min_distance = None
-
+    nearby = []
 
 
     for vessel in vessels:
+
+
+        if (
+            vessel.get("lat") is None
+            or
+            vessel.get("lon") is None
+        ):
+            continue
+
 
 
         distance = haversine_distance(
@@ -100,21 +88,56 @@ def find_nearest_vessel(
         if distance <= max_distance_km:
 
 
-            if (
-                min_distance is None
-                or distance < min_distance
-            ):
+            item = vessel.copy()
+
+            item["distance_km"] = distance
 
 
-                min_distance = distance
-
-                nearest = vessel.copy()
-
-                nearest["distance_km"] = distance
+            nearby.append(item)
 
 
 
-    return nearest
+    nearby.sort(
+
+        key=lambda x: x["distance_km"]
+
+    )
+
+
+    return nearby
+
+
+
+
+
+def find_nearest_vessel(
+    spill_lat,
+    spill_lon,
+    vessels,
+    max_distance_km=20
+):
+
+
+    nearby = find_nearby_vessels(
+
+        spill_lat,
+
+        spill_lon,
+
+        vessels,
+
+        max_distance_km
+
+    )
+
+
+    if nearby:
+
+        return nearby[0]
+
+
+    return None
+
 
 
 
@@ -122,9 +145,6 @@ def find_nearest_vessel(
 def vessel_risk_score(
     vessel
 ):
-    """
-    مساهمة السفينة في احتمال الانسكاب
-    """
 
     if vessel is None:
 
@@ -143,11 +163,15 @@ def vessel_risk_score(
 
 
 
-    if distance < 5:
+    if distance <= 3:
+
+        score += 40
+
+    elif distance <= 5:
 
         score += 30
 
-    elif distance < 10:
+    elif distance <= 10:
 
         score += 20
 
@@ -164,10 +188,44 @@ def vessel_risk_score(
 
 
 
-    if speed > 5:
+    if speed >= 5:
 
         score += 10
 
 
 
-    return score
+    heading = vessel.get(
+        "heading",
+        0
+    )
+
+
+    if heading:
+
+        score += 5
+
+
+
+    return min(
+        score,
+        50
+    )
+
+
+
+
+
+def vessel_summary(
+    vessels
+):
+
+    return {
+
+        "count": len(vessels),
+
+        "nearest":
+            vessels[0]
+            if vessels
+            else None
+
+    }
