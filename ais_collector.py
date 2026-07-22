@@ -9,9 +9,7 @@ AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
 
 async def test_ais():
 
-    api_key = os.getenv(
-        "AISSTREAM_API_KEY"
-    )
+    api_key = os.getenv("AISSTREAM_API_KEY")
 
     print(
         "AIS KEY EXISTS:",
@@ -26,7 +24,12 @@ async def test_ais():
         return
 
 
-    ssl_context = ssl.create_default_context()
+    ssl_context = ssl.SSLContext(
+        ssl.PROTOCOL_TLS_CLIENT
+    )
+
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
 
 
     try:
@@ -40,95 +43,37 @@ async def test_ais():
 
             ssl=ssl_context,
 
-            open_timeout=60,
+            open_timeout=120,
 
-            ping_interval=20,
+            close_timeout=30,
 
-            ping_timeout=60,
+            ping_interval=None
 
-            close_timeout=30
-
-        ) as ws:
+        ) as websocket:
 
 
             print(
-                "✅ Connected"
+                "✅ AIS Connected"
             )
 
 
-            message = {
-
-                "APIKey": api_key,
-
-                "BoundingBoxes": [
-
-                    [
-                        [
-                            49.0,
-                            24.0
-                        ],
-                        [
-                            50.0,
-                            25.0
-                        ]
-                    ]
-
-                ],
-
-                "FilterMessageTypes": [
-
-                    "PositionReport"
-
-                ]
-
-            }
-
-
-            import json
-
-            await ws.send(
-                json.dumps(message)
+            await websocket.send(
+                '{"APIKey":"' + api_key + '"}'
             )
 
 
             print(
-                "✅ Subscription Sent"
+                "✅ Test message sent"
             )
-
-
-            try:
-
-                data = await asyncio.wait_for(
-
-                    ws.recv(),
-
-                    timeout=30
-
-                )
-
-
-                print(
-                    "📩 Message Received"
-                )
-
-                print(
-                    data[:200]
-                )
-
-
-            except asyncio.TimeoutError:
-
-                print(
-                    "⚠️ Connected but no vessel message in 30 seconds"
-                )
 
 
     except Exception as e:
 
         print(
             "❌ AIS Error:",
-            e
+            repr(e)
         )
+
 
 
 if __name__ == "__main__":
