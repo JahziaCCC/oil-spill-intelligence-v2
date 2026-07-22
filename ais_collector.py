@@ -7,7 +7,7 @@ import websockets
 from datetime import datetime, timezone
 
 
-AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
+AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream/"
 
 CACHE_FILE = "ais_cache.json"
 
