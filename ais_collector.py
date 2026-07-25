@@ -1,83 +1,52 @@
-import os
-import asyncio
-import ssl
-import websockets
+import time
+import json
+import websocket  # تأكد من استيراد مكتبة الـ websocket إذا لم تكن موجودة
 
+# --- 1. إعداد الاتصال (تأكد من وضع الرابط الصحيح للـ WebSocket هنا) ---
+WS_URL = "wss://your-ais-websocket-url"  # استبدل هذا برابط الخدمة لديك
 
-AISSTREAM_URL = "wss://stream.aisstream.io/v0/stream"
+print("🔌 Connecting to AIS WebSocket...")
+try:
+    ws = websocket.create_connection(WS_URL)
+    print("✅ Connected successfully!")
+except Exception as e:
+    print(f"❌ Connection Error: {e}")
+    exit(1)
 
+# --- 2. استقبال وطباعة الرسائل ---
+print("⏳ Waiting for AIS messages...")
 
-async def test_ais():
+received = 0
+start_time = time.time()
 
-    api_key = os.getenv("AISSTREAM_API_KEY")
+try:
+    while time.time() - start_time < 30:
+        try:
+            # محاولة استقبال الرسالة من الـ WebSocket
+            message = ws.recv()
+            data = json.loads(message)
 
-    print(
-        "AIS KEY EXISTS:",
-        bool(api_key),
-        "LENGTH:",
-        len(api_key) if api_key else 0
-    )
+            print("=" * 60)
+            print("📥 AIS MESSAGE")
+            print(json.dumps(data, indent=2))
 
+            received += 1
 
-    if not api_key:
-        print("❌ Missing API Key")
-        return
+            # الخروج فور استقبال 5 رسائل ناجحة
+            if received >= 5:
+                break
 
+        except Exception as e:
+            print("Receive Error:", e)
+            break
 
-    ssl_context = ssl.SSLContext(
-        ssl.PROTOCOL_TLS_CLIENT
-    )
+    if received == 0:
+        print("⚠️ No AIS messages received within 30 seconds.")
 
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-
-
+finally:
+    # --- 3. إغلاق الاتصال بشكل صحيح وضامن ---
     try:
-
-        print("📡 Connecting AISStream...")
-
-
-        async with websockets.connect(
-
-            AISSTREAM_URL,
-
-            ssl=ssl_context,
-
-            open_timeout=120,
-
-            close_timeout=30,
-
-            ping_interval=None
-
-        ) as websocket:
-
-
-            print(
-                "✅ AIS Connected"
-            )
-
-
-            await websocket.send(
-                '{"APIKey":"' + api_key + '"}'
-            )
-
-
-            print(
-                "✅ Test message sent"
-            )
-
-
-    except Exception as e:
-
-        print(
-            "❌ AIS Error:",
-            repr(e)
-        )
-
-
-
-if __name__ == "__main__":
-
-    asyncio.run(
-        test_ais()
-    )
+        ws.close()
+        print("🔌 WebSocket connection closed.")
+    except Exception as close_error:
+        print("Error closing WebSocket:", close_error)
