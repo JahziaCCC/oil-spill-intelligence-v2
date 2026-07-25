@@ -1,8 +1,8 @@
 import time
 import json
-import websocket  # تأكد من استيراد مكتبة الـ websocket إذا لم تكن موجودة
+import websocket
 
-# --- 1. إعداد الاتصال (تأكد من وضع الرابط الصحيح للـ WebSocket هنا) ---
+# --- 1. إعداد الاتصال ---
 WS_URL = "wss://your-ais-websocket-url"  # استبدل هذا برابط الخدمة لديك
 
 print("🔌 Connecting to AIS WebSocket...")
@@ -22,7 +22,6 @@ start_time = time.time()
 try:
     while time.time() - start_time < 30:
         try:
-            # محاولة استقبال الرسالة من الـ WebSocket
             message = ws.recv()
             data = json.loads(message)
 
@@ -32,7 +31,6 @@ try:
 
             received += 1
 
-            # الخروج فور استقبال 5 رسائل ناجحة
             if received >= 5:
                 break
 
@@ -44,7 +42,7 @@ try:
         print("⚠️ No AIS messages received within 30 seconds.")
 
 finally:
-    # --- 3. إغلاق الاتصال بشكل صحيح وضامن ---
+    # --- 3. إغلاق الاتصال بأمان ---
     try:
         ws.close()
         print("🔌 WebSocket connection closed.")
