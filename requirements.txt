@@ -4,3 +4,4 @@ scipy
 pillow
 folium
 websockets
+websocket-client
