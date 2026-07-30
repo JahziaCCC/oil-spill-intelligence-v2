@@ -3,7 +3,7 @@ import json
 import time
 import websocket
 
-AIS_API_KEY = os.getenv("AIS_API_KEY")
+AIS_API_KEY = os.getenv("AISSTREAM_API_KEY")
 
 print("AIS KEY EXISTS:", AIS_API_KEY is not None,
       "LENGTH:", len(AIS_API_KEY) if AIS_API_KEY else 0)
